@@ -1,0 +1,18 @@
+R"====(
+
+#version 330 core
+
+in vec3 bColor;
+in vec2 bUV;
+
+out vec4 FragColor;
+
+uniform sampler2D texContainer;
+uniform sampler2D texFace;
+
+void main() {
+    FragColor = mix(texture(texContainer, bUV), texture(texFace, bUV), 0.15);
+}
+
+)===="
+;
