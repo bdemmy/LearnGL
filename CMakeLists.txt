@@ -1,6 +1,23 @@
 cmake_minimum_required(VERSION 3.16)
 project(LearnGL LANGUAGES C CXX)
 
+macro(configure_files srcDir destDir)
+    message(STATUS "Configuring directory ${destDir}")
+    make_directory(${destDir})
+
+    file(GLOB templateFiles RELATIVE ${srcDir} ${srcDir}/*)
+    foreach(templateFile ${templateFiles})
+        set(srcTemplatePath ${srcDir}/${templateFile})
+        if(NOT IS_DIRECTORY ${srcTemplatePath})
+            message(STATUS "Configuring file ${templateFile}")
+            configure_file(
+                    ${srcTemplatePath}
+                    ${destDir}/${templateFile}
+                    @ONLY)
+        endif(NOT IS_DIRECTORY ${srcTemplatePath})
+    endforeach(templateFile)
+endmacro(configure_files)
+
 # If using visual studio
 if (MSVC_VERSION GREATER_EQUAL "1900")
     include(CheckCXXCompilerFlag)
@@ -34,3 +51,7 @@ add_executable(LearnGL main.cpp shader.cpp shader.h)
 
 # Linking
 target_link_libraries(LearnGL ${OpenGL_LIB_NAMES} glad glfw)
+
+add_custom_command(TARGET LearnGL PRE_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/textures/ $<TARGET_FILE_DIR:LearnGL>/textures)

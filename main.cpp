@@ -232,6 +232,7 @@ bool initialize_shaders() {
 		return false;
 	}
 
+	mainShader->setInt("texContainer", 0);
 	mainShader->setInt("texFace", 1);
 
 	return true;
@@ -240,7 +241,7 @@ bool initialize_shaders() {
 void initialize_textures() {
 	// Load our image from disk
 	int width, height, channels;
-	auto* const data = stbi_load("container.jpg", &width, &height, &channels, 0);
+	auto* const data = stbi_load("textures/container.jpg", &width, &height, &channels, 0);
 
 	// Create the texture object, bind it, copy the data, then gen the mipmaps
 	glGenTextures(1, &texture);
@@ -256,7 +257,7 @@ void initialize_textures() {
 	stbi_image_free(data);
 
 	stbi_set_flip_vertically_on_load(true);
-	auto* const data2 = stbi_load("awesomeface.png", &width, &height, &channels, 0);
+	auto* const data2 = stbi_load("textures/awesomeface.png", &width, &height, &channels, 0);
 
 	// Create the texture object, bind it, copy the data, then gen the mipmaps
 	glGenTextures(1, &texture2);
