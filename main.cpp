@@ -51,9 +51,11 @@ void main() {
 #include "GLFW/glfw3.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#include "glm/glm/glm.hpp"
 
 // Local includes
 #include "shader.h"
+#include "window.h"
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -62,6 +64,11 @@ constexpr auto WINDOW_HEIGHT = 768;
 // Global data
 shader* mainShader;
 unsigned int texture, texture2;
+glm::vec3 v_cameraPos;
+glm::vec3 v_cameraTarget;
+glm::vec3 v_cameraDirection;
+glm::vec3 v_cameraRight;
+glm::vec3 v_cameraUp;
 
 // Function prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -70,38 +77,11 @@ void render_triangle();
 void render_square();
 bool initialize_shaders();
 void initialize_textures();
+void init_camera();
 
 int main() {
-	// Initialize GLFW and specify our profile
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	// Attempt to spawn a window, if this fails, notify the user and exit
-	auto* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "First Window", nullptr, nullptr);
-	if (window == nullptr) {
-		std::cerr << "Failed to initialize GLFW window." << std::endl;
-
-		glfwTerminate();
-		return -1;
-	}
-
-	// If we succeeded then we need to hold onto the context
-	glfwMakeContextCurrent(window);
-
-	// Now initialize glad, or throw an error if we can't
-	if (!gladLoadGLLoader(GLADloadproc(glfwGetProcAddress))) {
-		std::cerr << "Failed to initialize GLAD." << std::endl;
-
-		return -1;
-	}
-
-	// Set our viewport.  Match the window dimensions as we aren't doing anything outside of the viewport
-	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-	// Set our callback for when we resize the window
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	// Initialize the window optionally using opengl settings
+	auto window = init_window(WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	// Initialize our shaders
 	if (!initialize_shaders()) {
@@ -126,10 +106,6 @@ int main() {
 	}
 
 	return 0;
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, width, height);
 }
 
 void process_input_for_window(GLFWwindow* window) {
@@ -271,4 +247,13 @@ void initialize_textures() {
 
 	// Free the texture
 	stbi_image_free(data2);
+}
+
+void init_camera() {
+	v_cameraPos = glm::vec3(0, 0, 3);
+	v_cameraTarget = glm::vec3(0, 0, 0);
+	v_cameraDirection = glm::normalize(v_cameraPos - v_cameraTarget);
+	const auto up = glm::vec3(0, 1, 0);
+	v_cameraRight = glm::normalize(glm::cross(up, v_cameraDirection));
+	v_cameraUp = glm::cross(v_cameraDirection, v_cameraRight);
 }
