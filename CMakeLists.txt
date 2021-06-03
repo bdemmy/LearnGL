@@ -56,4 +56,10 @@ target_link_libraries(LearnGL ${OpenGL_LIB_NAMES} glad glfw)
 
 add_custom_command(TARGET LearnGL PRE_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                       ${CMAKE_SOURCE_DIR}/textures/ $<TARGET_FILE_DIR:LearnGL>/textures)
+                       ${CMAKE_SOURCE_DIR}/textures/ $<TARGET_FILE_DIR:LearnGL>/textures
+                   COMMENT "Copied textures to build dir.")
+
+add_custom_command(TARGET LearnGL POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/shaders/ $<TARGET_FILE_DIR:LearnGL>/shaders
+                   COMMENT "Copied shaders to build dir.")

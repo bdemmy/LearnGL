@@ -2,47 +2,6 @@
 // Created by demmyb on 8/13/20.
 //
 
-const char* VERT_SHADER_S =
-R"====(
-
-#version 330 core
-
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
-layout (location = 2) in vec2 aUV;
-
-out vec3 bColor;
-out vec2 bUV;
-
-void main() {
-    gl_Position = vec4(aPos.xyz, 1.0);
-
-    bColor = aColor;
-    bUV = aUV;
-}
-
-)====";
-
-const char* FRAG_SHADER_S =
-R"====(
-
-#version 330 core
-
-in vec3 bColor;
-in vec2 bUV;
-
-out vec4 FragColor;
-
-uniform sampler2D texContainer;
-uniform sampler2D texFace;
-
-void main() {
-    FragColor = mix(texture(texContainer, bUV), texture(texFace, bUV), 0.15);
-}
-
-)===="
-;
-
 // STD includes
 #include <iostream>
 
@@ -56,6 +15,10 @@ void main() {
 // Local includes
 #include "shader.h"
 #include "window.h"
+#include <algorithm>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -78,6 +41,17 @@ void render_square();
 bool initialize_shaders();
 void initialize_textures();
 void init_camera();
+
+std::string load_file_to_str(const std::string& path) {
+	const auto ifs = std::ifstream(path);
+	auto sb = std::stringstream{};
+
+	if (ifs) {
+		sb << ifs.rdbuf();
+	}
+
+	return sb.str();
+}
 
 int main() {
 	// Initialize the window optionally using opengl settings
@@ -201,7 +175,10 @@ void render_square() {
 }
 
 bool initialize_shaders() {
-	mainShader = new shader(&VERT_SHADER_S, &FRAG_SHADER_S);
+	const auto VERT_SHADER_S = load_file_to_str("shaders/vertex");
+	const auto FRAG_SHADER_S = load_file_to_str("shaders/fragment");
+
+	mainShader = new shader(VERT_SHADER_S, FRAG_SHADER_S);
 
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
