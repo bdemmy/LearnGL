@@ -14,18 +14,21 @@
 
 // Local includes
 #include "shader.h"
+#include "texture.h"
 #include "window.h"
 #include <algorithm>
 #include <fstream>
 #include <string>
 #include <sstream>
+#include "glm/glm/ext/matrix_transform.hpp"
+#include "glm/glm/ext/matrix_clip_space.hpp"
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
 constexpr auto WINDOW_HEIGHT = 768;
 
 // Global data
-shader* mainShader;
+std::unique_ptr<shader> mainShader;
 unsigned int texture, texture2;
 glm::vec3 v_cameraPos;
 glm::vec3 v_cameraTarget;
@@ -74,6 +77,10 @@ int main() {
 		glClearColor(0.05f, 0.05f, 0.05f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		mainShader->setMatrix("model", glm::rotate(glm::mat4(1.0), glm::radians(-55.f), glm::vec3(1.0, 0.0, 0.0)));
+		mainShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
+		mainShader->setMatrix("view", glm::translate(glm::mat4(1.0f), glm::vec3(0,0, -3.0)));
+
 		render_square();
 
 		glfwSwapBuffers(window);
@@ -88,36 +95,6 @@ void process_input_for_window(GLFWwindow* window) {
 	}
 }
 
-void render_triangle() {
-	const float vertexData[]{
-			-0.7f, -0.3f, 0,
-			-0.5f, 0.3f, 0,
-			-0.3f, -0.3f, 0
-	};
-
-	static bool initialized = false;
-	static unsigned int VBO;
-	static unsigned int VAO;
-
-	if (!initialized) {
-		glGenBuffers(1, &VBO);
-		glGenVertexArrays(1, &VAO);
-
-		glBindVertexArray(VAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
-		glEnableVertexAttribArray(0);
-
-		initialized = true;
-	}
-
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-}
-
 struct vertex_t {
 	float pos[3];
 	float color[3];
@@ -126,10 +103,10 @@ struct vertex_t {
 
 void render_square() {
 	const vertex_t vertices[] = {
-			{.pos = {-0.5, -0.5, 0}, .color = {0, 0, 1}, .uv = {0, 0}},
-			{.pos = {-0.5,  0.5, 0}, .color = {1, 1, 0}, .uv = {0, 1}},
-			{.pos = { 0.5,  0.5, 0}, .color = {1, 0, 0}, .uv = {1, 1}},
-			{.pos = { 0.5, -0.5, 0}, .color = {0, 1, 0}, .uv = {1, 0}},
+			{.pos = {-1, -1, 0}, .color = {1, 1, 1}, .uv = {0, 0}},
+			{.pos = {-1,  1, 0}, .color = {1, 1, 1}, .uv = {0, 1}},
+			{.pos = { 1,  1, 0}, .color = {1, 1, 1}, .uv = {1, 1}},
+			{.pos = { 1, -1, 0}, .color = {1, 1, 1}, .uv = {1, 0}},
 	};
 
 	const uint32_t indices[]{
@@ -178,7 +155,7 @@ bool initialize_shaders() {
 	const auto VERT_SHADER_S = load_file_to_str("shaders/vertex");
 	const auto FRAG_SHADER_S = load_file_to_str("shaders/fragment");
 
-	mainShader = new shader(VERT_SHADER_S, FRAG_SHADER_S);
+	mainShader = std::make_unique<shader>(VERT_SHADER_S, FRAG_SHADER_S);
 
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
@@ -192,38 +169,8 @@ bool initialize_shaders() {
 }
 
 void initialize_textures() {
-	// Load our image from disk
-	int width, height, channels;
-	auto* const data = stbi_load("textures/container.jpg", &width, &height, &channels, 0);
-
-	// Create the texture object, bind it, copy the data, then gen the mipmaps
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	// Only do the last two if the file exists
-	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-
-	// Free the texture
-	stbi_image_free(data);
-
-	stbi_set_flip_vertically_on_load(true);
-	auto* const data2 = stbi_load("textures/awesomeface.png", &width, &height, &channels, 0);
-
-	// Create the texture object, bind it, copy the data, then gen the mipmaps
-	glGenTextures(1, &texture2);
-	glBindTexture(GL_TEXTURE_2D, texture2);
-
-	// Only do the last two if the file exists
-	if (data2) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-
-	// Free the texture
-	stbi_image_free(data2);
+	texture = load_texture("textures/container.jpg");
+	texture2 = load_texture("textures/awesomeface.png", true);
 }
 
 void init_camera() {
