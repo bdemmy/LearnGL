@@ -10,18 +10,19 @@
 #include "GLFW/glfw3.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
-#include "glm/glm/glm.hpp"
+#include "glm/glm.hpp"
+#include <algorithm>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include "glm/ext/matrix_transform.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
 
 // Local includes
 #include "shader.h"
 #include "texture.h"
 #include "window.h"
-#include <algorithm>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include "glm/glm/ext/matrix_transform.hpp"
-#include "glm/glm/ext/matrix_clip_space.hpp"
+#include "camera.h"
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -30,31 +31,16 @@ constexpr auto WINDOW_HEIGHT = 768;
 // Global data
 std::unique_ptr<shader> mainShader;
 unsigned int texture, texture2;
-glm::vec3 v_cameraPos;
-glm::vec3 v_cameraTarget;
-glm::vec3 v_cameraDirection;
-glm::vec3 v_cameraRight;
-glm::vec3 v_cameraUp;
+float deltaTime = 0.f;
+float lastTime = 0.f;
 
 // Function prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void process_input_for_window(GLFWwindow* window);
-void render_triangle();
 void render_square();
 bool initialize_shaders();
 void initialize_textures();
-void init_camera();
-
-std::string load_file_to_str(const std::string& path) {
-	const auto ifs = std::ifstream(path);
-	auto sb = std::stringstream{};
-
-	if (ifs) {
-		sb << ifs.rdbuf();
-	}
-
-	return sb.str();
-}
+void render_cube();
 
 int main() {
 	// Initialize the window optionally using opengl settings
@@ -69,19 +55,31 @@ int main() {
 	// Generate and setup the textures (just one for now)
 	initialize_textures();
 
+	// Main camera
+	auto cam1 = camera(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0));
+
 	// Our main render loop
 	while (!glfwWindowShouldClose(window)) {
+		float curTime = glfwGetTime();
+		deltaTime = curTime - lastTime;
+		lastTime = curTime;
+
 		glfwPollEvents();
 		process_input_for_window(window);
 
 		glClearColor(0.05f, 0.05f, 0.05f, 1.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		const auto camX = sin(glfwGetTime()) * 5;
+		const auto camZ = cos(glfwGetTime()) * 5;
+		cam1.set_position(glm::vec3(camX, 0, camZ));
+		cam1.look_at(glm::vec3(0, 0, 0));
 
 		mainShader->setMatrix("model", glm::rotate(glm::mat4(1.0), glm::radians(-55.f), glm::vec3(1.0, 0.0, 0.0)));
-		mainShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
-		mainShader->setMatrix("view", glm::translate(glm::mat4(1.0f), glm::vec3(0,0, -3.0)));
+		mainShader->setMatrix("projection", glm::perspective(glm::radians(90.f), 16.f / 9.f, 0.1f, 100.0f));
+		mainShader->setMatrix("view", cam1.matrix());
 
-		render_square();
+		render_cube();
 
 		glfwSwapBuffers(window);
 	}
@@ -100,6 +98,96 @@ struct vertex_t {
 	float color[3];
 	float uv[2];
 };
+
+void render_cube() {
+	float vertices[] = {
+		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
+		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+		-0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
+		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+		0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+		0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
+		-0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
+		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+		-0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+		-0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+		-0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+		0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
+		0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+		0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
+		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		-0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
+		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
+		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
+		-0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+		-0.5f, 0.5f, -0.5f, 0.0f, 1.0f
+	};
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(2.0f, 5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f, 3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f, 2.0f, -2.5f),
+		glm::vec3(1.5f, 0.2f, -1.5f),
+		glm::vec3(-1.3f, 1.0f, -1.5f) 
+	};
+
+	static bool initialized = false;
+	static unsigned int VBO;
+	static unsigned int VAO;
+
+	if (!initialized) {
+		glGenBuffers(1, &VBO);
+		glGenVertexArrays(1, &VAO);
+
+		glBindVertexArray(VAO);
+
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+		glEnableVertexAttribArray(0);
+
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+
+		initialized = true;
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	glBindVertexArray(VAO);
+
+	for (int i = 0; i < 10; i++) {
+		auto modelMatrix = glm::mat4(1.0);
+		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
+		const auto angle = 20.f * i;
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+		mainShader->setMatrix("model", modelMatrix);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+	}
+}
 
 void render_square() {
 	const vertex_t vertices[] = {
@@ -152,18 +240,15 @@ void render_square() {
 }
 
 bool initialize_shaders() {
-	const auto VERT_SHADER_S = load_file_to_str("shaders/vertex");
-	const auto FRAG_SHADER_S = load_file_to_str("shaders/fragment");
-
-	mainShader = std::make_unique<shader>(VERT_SHADER_S, FRAG_SHADER_S);
+	mainShader = std::make_unique<shader>("shaders/vertex", "shaders/fragment");
 
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
 		return false;
 	}
 
-	mainShader->setInt("texContainer", 0);
-	mainShader->setInt("texFace", 1);
+	mainShader->setInt("tex1", 0);
+	mainShader->setInt("tex2", 1);
 
 	return true;
 }
@@ -171,13 +256,4 @@ bool initialize_shaders() {
 void initialize_textures() {
 	texture = load_texture("textures/container.jpg");
 	texture2 = load_texture("textures/awesomeface.png", true);
-}
-
-void init_camera() {
-	v_cameraPos = glm::vec3(0, 0, 3);
-	v_cameraTarget = glm::vec3(0, 0, 0);
-	v_cameraDirection = glm::normalize(v_cameraPos - v_cameraTarget);
-	const auto up = glm::vec3(0, 1, 0);
-	v_cameraRight = glm::normalize(glm::cross(up, v_cameraDirection));
-	v_cameraUp = glm::cross(v_cameraDirection, v_cameraRight);
 }

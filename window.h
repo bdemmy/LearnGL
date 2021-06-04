@@ -10,7 +10,7 @@
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+auto framebuffer_size_callback(GLFWwindow* window, int width, int height) -> void {
 	glViewport(0, 0, width, height);
 }
 
@@ -45,6 +45,8 @@ auto init_window(int width, int height) -> GLFWwindow* {
 
 	// Set our callback for when we resize the window
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	glEnable(GL_DEPTH_TEST);
 
 	return window;
 }

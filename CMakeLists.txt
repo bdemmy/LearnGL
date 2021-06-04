@@ -38,7 +38,7 @@ find_package(OpenGL REQUIRED)
 include_directories(glfw/include)
 include_directories(${OpenGL_INCLUDE_DIRS})
 include_directories(glad/include)
-include_directories(glm/include)
+include_directories(glm)
 
 # Subprojects
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -49,7 +49,7 @@ add_subdirectory(glad)
 add_subdirectory(glm)
 
 # Main executable
-add_executable(LearnGL main.cpp shader.cpp shader.h "window.h" "texture.h")
+add_executable(LearnGL main.cpp shader.cpp shader.h "window.h" "texture.h" "texture.cpp" "camera.h")
 
 # Linking
 target_link_libraries(LearnGL ${OpenGL_LIB_NAMES} glad glfw)
