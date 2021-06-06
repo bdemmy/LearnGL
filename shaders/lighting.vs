@@ -9,6 +9,7 @@ layout (location = 4) in float aC;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 normalModel;
 
 out vec2 bUV;
 out vec3 bNormal;
@@ -17,7 +18,7 @@ out vec3 FragPos;
 void main() {
     gl_Position = projection * view * model * vec4(aPos.xyz, 1.0);
     FragPos = vec3(model * vec4(aPos, 1.0));
-    bNormal = mat3(transpose(inverse(model))) * aNormal;
+    bNormal = mat3(normalModel) * aNormal;
 
     // Unused
     bUV = aUV;

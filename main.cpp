@@ -24,6 +24,7 @@
 #include "window.h"
 #include "camera.h"
 #include "mesh.h"
+#include <glm/gtc/matrix_inverse.hpp>
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -36,6 +37,7 @@ std::unique_ptr<shader> lightSourceShader;
 unsigned int texture, texture2;
 float deltaTime = 0.f;
 float lastTime = 0.f;
+auto cam1 = camera(glm::vec3(0, 0, 3));
 
 // Function prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -48,28 +50,47 @@ void render_cubes();
 std::unique_ptr<mesh> testMesh;
 
 void RenderLight() {
-	glm::vec3 lightPos(1.f, 1.f, 0.f);
+	const auto camX = sin(glfwGetTime()) * 1;
+	const auto camZ = cos(glfwGetTime()) * 1;
+	glm::vec3 lightPos(camX, 0.25, camZ);
 	lightingShader->setVec3("lightPos", lightPos.x, lightPos.y, lightPos.z);
 	auto model = glm::mat4(1.0f);
-	model = glm::translate(model, lightPos);
-	model = glm::scale(model, glm::vec3(0.3f));
+	model = glm::translate(model, lightPos); 
+	model = glm::scale(model, glm::vec3(0.2f));
 	lightSourceShader->use();
 	lightSourceShader->setMatrix("model", model);
-	testMesh->Draw();
+	testMesh->Draw(); 
 }
 
 void RenderLitCube() {
-	static float rotation = 0.f;
-	rotation += 35.f * deltaTime;
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(2.0f, 5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f, 3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f, 2.0f, -2.5f),
+		glm::vec3(1.5f, 0.2f, -1.5f),
+		glm::vec3(-1.3f, 1.0f, -1.5f)
+	};
+
 	lightingShader->use();
 	lightingShader->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-	lightingShader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-	glm::vec3 lightPos(0, -1, 0); 
-	auto model = glm::mat4(1.0f);
-	model = glm::translate(model, lightPos);
-	model = glm::rotate(model, glm::radians(rotation), glm::vec3(.1, 1, .1));
-	lightingShader->setMatrix("model", model);
-	testMesh->Draw();
+	lightingShader->setVec3("lightColor", 1.f, 0.f, 1.0f); 
+	lightingShader->setVec3("viewPos", cam1.get_pos());
+
+	for (int i = 0; i < 10; i++) {
+		auto modelMatrix = glm::mat4(1.0);
+		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
+		modelMatrix = glm::scale(modelMatrix, glm::vec3(.8));
+		const float angle = 20.f * i;
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f)); 
+		lightingShader->setMatrix("normalModel", glm::inverseTranspose(modelMatrix)); 
+		lightingShader->setMatrix("model", modelMatrix);
+		testMesh->Draw();
+	}
 }
 
 int main() {
@@ -86,11 +107,10 @@ int main() {
 	initialize_textures();
 
 	// Main camera
-	auto cam1 = camera(glm::vec3(0, 0, 3));
 	cam1.set_yaw(-90); 
 
 	// Our main render loop
-	testMesh = std::make_unique<mesh>("meshes/test.mesh"); 
+	testMesh = std::make_unique<mesh>("meshes/sphere.mesh"); 
 
 	while (!glfwWindowShouldClose(window)) {
 		float curTime = glfwGetTime();
@@ -103,8 +123,6 @@ int main() {
 		glClearColor(0.05f, 0.05f, 0.05f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		const auto camX = sin(glfwGetTime()) * 5;
-		const auto camZ = cos(glfwGetTime()) * 5;
 		cam1.set_pitch(0);
 
 		mainShader->setMatrix("model", glm::rotate(glm::mat4(1.0), glm::radians(-55.f), glm::vec3(1.0, 0.0, 0.0)));
@@ -117,7 +135,11 @@ int main() {
 		lightingShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
 		lightingShader->setMatrix("view", cam1.matrix());
 
-		//render_cubes();
+		//render_cubes(); 
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texture2);
 		RenderLight();
 		RenderLitCube();
 
@@ -239,6 +261,9 @@ bool initialize_shaders() {
 
 	mainShader->setInt("tex1", 0);
 	mainShader->setInt("tex2", 1);
+
+	lightingShader->setInt("tex1", 0);
+	lightingShader->setInt("tex2", 1);
 
 	return true;
 }

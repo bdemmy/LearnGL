@@ -37,6 +37,10 @@ public:
 	auto set_position(const glm::vec3&& pos) {
 		m_vCameraPos = pos;
 	}
+
+	auto get_pos() const {
+		return m_vCameraPos;
+	}
 	
 	auto set_pitch(const float pitch) {
 		m_fPitch = pitch;

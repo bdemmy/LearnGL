@@ -46,14 +46,24 @@ public:
 		std::string curLineStr{};
 		auto mode = -1;
 		while (std::getline(inFile, curLineStr)) {
-			if (!strcmp(curLineStr.c_str(), "vertices")) {
+			if (curLineStr.rfind("vertices", 0) == 0) {
 				std::cout << "Vertex Mode" << std::endl;
 				mode = 0;
+				int numVerts;
+				if (sscanf(curLineStr.c_str(), "vertices %d", &numVerts) == 1) {
+					printf("Preallocating for %d vertices.\n", numVerts);
+					vertices.reserve(numVerts);
+				}
 				continue;
 			}
-			if (!strcmp(curLineStr.c_str(), "indices")) {
+			if (curLineStr.rfind("indices", 0) == 0) {
 				std::cout << "Index Mode" << std::endl;
 				mode = 1;
+				int nInd;
+				if (sscanf(curLineStr.c_str(), "indices %d", &nInd) == 1) {
+					printf("Preallocating for %d indices.\n", nInd);
+					vertices.reserve(nInd);
+				}
 				continue;
 			}
 

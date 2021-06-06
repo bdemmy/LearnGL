@@ -17,6 +17,7 @@ auto framebuffer_size_callback(GLFWwindow* window, int width, int height) -> voi
 auto init_window(int width, int height) -> GLFWwindow* {
 	// Initialize GLFW and specify our profile
 	glfwInit();
+	glfwWindowHint(GLFW_SAMPLES, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, OPENGL_CONTEXTV_MAJOR);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, OPENGL_CONTEXTV_MINOR);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -47,6 +48,7 @@ auto init_window(int width, int height) -> GLFWwindow* {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
 
 	glfwSwapInterval(1);
 
