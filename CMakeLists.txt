@@ -49,7 +49,7 @@ add_subdirectory(glad)
 add_subdirectory(glm)
 
 # Main executable
-add_executable(LearnGL main.cpp shader.cpp shader.h "window.h" "texture.h" "texture.cpp" "camera.h")
+add_executable(LearnGL main.cpp shader.cpp shader.h "window.h" "texture.h" "texture.cpp" "camera.h" "mesh.h")
 
 # Linking
 target_link_libraries(LearnGL ${OpenGL_LIB_NAMES} glad glfw)
@@ -63,3 +63,8 @@ add_custom_command(TARGET LearnGL POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                        ${CMAKE_SOURCE_DIR}/shaders/ $<TARGET_FILE_DIR:LearnGL>/shaders
                    COMMENT "Copied shaders to build dir.")
+
+add_custom_command(TARGET LearnGL POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       ${CMAKE_SOURCE_DIR}/meshes/ $<TARGET_FILE_DIR:LearnGL>/meshes
+                   COMMENT "Copied meshes to build dir.")

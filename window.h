@@ -48,5 +48,7 @@ auto init_window(int width, int height) -> GLFWwindow* {
 
 	glEnable(GL_DEPTH_TEST);
 
+	glfwSwapInterval(1);
+
 	return window;
 }

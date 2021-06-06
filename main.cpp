@@ -23,6 +23,7 @@
 #include "texture.h"
 #include "window.h"
 #include "camera.h"
+#include "mesh.h"
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -42,12 +43,14 @@ bool initialize_shaders();
 void initialize_textures();
 void render_cube();
 
+std::unique_ptr<mesh> testMesh;
+
 int main() {
 	// Initialize the window optionally using opengl settings
 	auto window = init_window(WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	// Initialize our shaders
-	if (!initialize_shaders()) {
+	if (!initialize_shaders()) {  
 		return -1;
 	}
 	mainShader->use();
@@ -56,9 +59,12 @@ int main() {
 	initialize_textures();
 
 	// Main camera
-	auto cam1 = camera(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0));
+	auto cam1 = camera(glm::vec3(0, 0, 3));
+	cam1.set_yaw(-90); 
 
 	// Our main render loop
+	//testMesh = std::make_unique<mesh>("meshes/test.mesh"); 
+
 	while (!glfwWindowShouldClose(window)) {
 		float curTime = glfwGetTime();
 		deltaTime = curTime - lastTime;
@@ -72,8 +78,7 @@ int main() {
 
 		const auto camX = sin(glfwGetTime()) * 5;
 		const auto camZ = cos(glfwGetTime()) * 5;
-		cam1.set_position(glm::vec3(camX, 0, camZ));
-		cam1.look_at(glm::vec3(0, 0, 0));
+		cam1.set_pitch(0);
 
 		mainShader->setMatrix("model", glm::rotate(glm::mat4(1.0), glm::radians(-55.f), glm::vec3(1.0, 0.0, 0.0)));
 		mainShader->setMatrix("projection", glm::perspective(glm::radians(90.f), 16.f / 9.f, 0.1f, 100.0f));
@@ -122,7 +127,7 @@ void render_cube() {
 		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
 		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
 		0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
 		0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
 		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
 		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
@@ -171,24 +176,34 @@ void render_cube() {
 		glEnableVertexAttribArray(1);
 
 		initialized = true;
-	}
+	} 
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texture2);
-	glBindVertexArray(VAO);
+	glBindVertexArray(VAO); 
 
-	for (int i = 0; i < 10; i++) {
+	/*auto modelMatrix = glm::mat4(1.0);
+	modelMatrix = glm::translate(modelMatrix, cubePositions[0]);
+	const auto angle = 20.f * 0;
+	modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+	mainShader->setMatrix("model", modelMatrix);
+	glBindVertexArray(testMesh->getVAO());
+	glDrawArrays(GL_TRIANGLES, 0, testMesh->NumIndices);*/
+
+	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
+		//modelMatrix = glm::scale(modelMatrix, glm::vec3(0.01, 0.01, 0.01));
 		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-		const auto angle = 20.f * i;
+		const float angle = 20.f * i;
 		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 		mainShader->setMatrix("model", modelMatrix);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//testMesh->Draw();  
 	}
 }
-
+ 
 void render_square() {
 	const vertex_t vertices[] = {
 			{.pos = {-1, -1, 0}, .color = {1, 1, 1}, .uv = {0, 0}},
