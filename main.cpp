@@ -31,6 +31,8 @@ constexpr auto WINDOW_HEIGHT = 768;
 
 // Global data
 std::unique_ptr<shader> mainShader;
+std::unique_ptr<shader> lightingShader;
+std::unique_ptr<shader> lightSourceShader;
 unsigned int texture, texture2;
 float deltaTime = 0.f;
 float lastTime = 0.f;
@@ -41,9 +43,34 @@ void process_input_for_window(GLFWwindow* window);
 void render_square();
 bool initialize_shaders();
 void initialize_textures();
-void render_cube();
+void render_cubes();
 
 std::unique_ptr<mesh> testMesh;
+
+void RenderLight() {
+	glm::vec3 lightPos(1.f, 1.f, 0.f);
+	lightingShader->setVec3("lightPos", lightPos.x, lightPos.y, lightPos.z);
+	auto model = glm::mat4(1.0f);
+	model = glm::translate(model, lightPos);
+	model = glm::scale(model, glm::vec3(0.3f));
+	lightSourceShader->use();
+	lightSourceShader->setMatrix("model", model);
+	testMesh->Draw();
+}
+
+void RenderLitCube() {
+	static float rotation = 0.f;
+	rotation += 35.f * deltaTime;
+	lightingShader->use();
+	lightingShader->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+	lightingShader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+	glm::vec3 lightPos(0, -1, 0); 
+	auto model = glm::mat4(1.0f);
+	model = glm::translate(model, lightPos);
+	model = glm::rotate(model, glm::radians(rotation), glm::vec3(.1, 1, .1));
+	lightingShader->setMatrix("model", model);
+	testMesh->Draw();
+}
 
 int main() {
 	// Initialize the window optionally using opengl settings
@@ -63,7 +90,7 @@ int main() {
 	cam1.set_yaw(-90); 
 
 	// Our main render loop
-	//testMesh = std::make_unique<mesh>("meshes/test.mesh"); 
+	testMesh = std::make_unique<mesh>("meshes/test.mesh"); 
 
 	while (!glfwWindowShouldClose(window)) {
 		float curTime = glfwGetTime();
@@ -81,10 +108,18 @@ int main() {
 		cam1.set_pitch(0);
 
 		mainShader->setMatrix("model", glm::rotate(glm::mat4(1.0), glm::radians(-55.f), glm::vec3(1.0, 0.0, 0.0)));
-		mainShader->setMatrix("projection", glm::perspective(glm::radians(90.f), 16.f / 9.f, 0.1f, 100.0f));
+		mainShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
 		mainShader->setMatrix("view", cam1.matrix());
 
-		render_cube();
+		lightSourceShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
+		lightSourceShader->setMatrix("view", cam1.matrix());
+
+		lightingShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
+		lightingShader->setMatrix("view", cam1.matrix());
+
+		//render_cubes();
+		RenderLight();
+		RenderLitCube();
 
 		glfwSwapBuffers(window);
 	}
@@ -104,45 +139,7 @@ struct vertex_t {
 	float uv[2];
 };
 
-void render_cube() {
-	float vertices[] = {
-		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-		0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-		-0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-		0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
-		0.5f, 0.5f, 0.5f, 1.0f, 1.0f,
-		-0.5f, 0.5f, 0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-		-0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-		-0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-		-0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-		0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 
-		0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
-		0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-		0.5f, -0.5f, 0.5f, 1.0f, 0.0f,
-		-0.5f, -0.5f, 0.5f, 0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, 0.5f, -0.5f, 0.0f, 1.0f,
-		0.5f, 0.5f, -0.5f, 1.0f, 1.0f,
-		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.5f, 1.0f, 0.0f,
-		-0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
-		-0.5f, 0.5f, -0.5f, 0.0f, 1.0f
-	};
+void render_cubes() {
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(2.0f, 5.0f, -15.0f),
@@ -156,51 +153,18 @@ void render_cube() {
 		glm::vec3(-1.3f, 1.0f, -1.5f) 
 	};
 
-	static bool initialized = false;
-	static unsigned int VBO;
-	static unsigned int VAO;
-
-	if (!initialized) {
-		glGenBuffers(1, &VBO);
-		glGenVertexArrays(1, &VAO);
-
-		glBindVertexArray(VAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-		glEnableVertexAttribArray(0);
-
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-
-		initialized = true;
-	} 
-
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texture2);
-	glBindVertexArray(VAO); 
-
-	/*auto modelMatrix = glm::mat4(1.0);
-	modelMatrix = glm::translate(modelMatrix, cubePositions[0]);
-	const auto angle = 20.f * 0;
-	modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-	mainShader->setMatrix("model", modelMatrix);
-	glBindVertexArray(testMesh->getVAO());
-	glDrawArrays(GL_TRIANGLES, 0, testMesh->NumIndices);*/
 
 	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
-		//modelMatrix = glm::scale(modelMatrix, glm::vec3(0.01, 0.01, 0.01));
 		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
 		const float angle = 20.f * i;
 		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 		mainShader->setMatrix("model", modelMatrix);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		//testMesh->Draw();  
+		testMesh->Draw();
 	}
 }
  
@@ -256,9 +220,20 @@ void render_square() {
 
 bool initialize_shaders() {
 	mainShader = std::make_unique<shader>("shaders/vertex", "shaders/fragment");
-
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
+		return false;
+	}
+
+	lightingShader = std::make_unique<shader>("shaders/lighting.vs", "shaders/lighting.fs");
+	if (lightingShader->error) {
+		std::cerr << "Error compiling shaders: \n" << lightingShader->log << std::endl;
+		return false;
+	}
+
+	lightSourceShader = std::make_unique<shader>("shaders/lighting.vs", "shaders/lightsource.fs");
+	if (lightSourceShader->error) {
+		std::cerr << "Error compiling shaders: \n" << lightSourceShader->log << std::endl;
 		return false;
 	}
 

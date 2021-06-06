@@ -117,13 +117,13 @@ public:
 
 		// X,Y,Z
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh_vertex_t), nullptr);
-		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(0); 
 
 		// U,V,W
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(mesh_vertex_t), (void*)(3 * sizeof(float)));
 		glEnableVertexAttribArray(1);
 
-		// Normal X,Y,Z
+		// Normal X,Y,Z 
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(mesh_vertex_t), (void*)(5 * sizeof(float)));
 		glEnableVertexAttribArray(2);
 

@@ -96,6 +96,16 @@ void shader::setMatrix(const char* name, const glm::mat4& v) {
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(v));
 }
 
+void shader::setVec3(const char* name, const glm::vec3&& v) {
+    const auto location = glGetUniformLocation(m_uProgram, name);
+    glUseProgram(m_uProgram);
+    glUniform3f(location, v.x, v.y, v.z);
+}
+
+void shader::setVec3(const char* name, const float x, const float y, const float z) {
+    setVec3(name, glm::vec3(x, y, z));
+}
+
 void shader::use() {
     glUseProgram(m_uProgram);
 }

@@ -27,6 +27,9 @@ public:
     void setInt(const char *name, const int &v);
 
     void setMatrix(const char* name, const glm::mat4& v);
+
+    void setVec3(const char* name, const glm::vec3&& v);
+    void setVec3(const char* name, const float x, const float y, const float z);
 };
 
 
