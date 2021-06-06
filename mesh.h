@@ -8,35 +8,11 @@
 
 class material;
 
-struct obj_vertex_t {
-	float x, y, z;
-};
-
-struct obj_uv_t {
-	float u, v;
-};
-
-struct obj_normal_t {
-	float x, y, z;
-};
-
-struct face_t {
-	bool uv, normal;
-	size_t v1, v2, v3;
-	size_t uv1, uv2, uv3;
-	size_t n1, n2, n3;
-};
-
 struct mesh_vertex_t {
 	float x, y, z;
 	float u, v;
 	float nx, ny, nz;
 	bool textured, hasNormal;
-};
-
-struct group_t {
-	std::string name;
-	std::vector<unsigned> faces;
 };
 
 class mesh {
