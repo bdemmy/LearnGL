@@ -5,6 +5,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
 class material;
 
@@ -31,73 +32,25 @@ class mesh {
 	unsigned int EBO;
 
 	unsigned int NumIndices;
+	bool valid = false;
 
 public:
-	mesh(const std::string&& path) {
-		auto inFile = std::ifstream{ path };
-		if (!inFile) {
-			return;
-		}
-
-		// Face definitions
-		std::vector<mesh_vertex_t> vertices{};
-		std::vector<unsigned> indices{};
-
-		std::string curLineStr{};
-		auto mode = -1;
-		while (std::getline(inFile, curLineStr)) {
-			if (curLineStr.rfind("vertices", 0) == 0) {
-				std::cout << "Vertex Mode" << std::endl;
-				mode = 0;
-				int numVerts;
-				if (sscanf(curLineStr.c_str(), "vertices %d", &numVerts) == 1) {
-					printf("Preallocating for %d vertices.\n", numVerts);
-					vertices.reserve(numVerts);
-				}
-				continue;
-			}
-			if (curLineStr.rfind("indices", 0) == 0) {
-				std::cout << "Index Mode" << std::endl;
-				mode = 1;
-				int nInd;
-				if (sscanf(curLineStr.c_str(), "indices %d", &nInd) == 1) {
-					printf("Preallocating for %d indices.\n", nInd);
-					vertices.reserve(nInd);
-				}
-				continue;
-			}
-
-			std::stringstream stream{ curLineStr };
-			if (mode == 0) {
-				mesh_vertex_t curVertex{};
-				stream >> curVertex.x >> curVertex.y
-					>> curVertex.z >> curVertex.u >> curVertex.v
-					>> curVertex.nx >> curVertex.ny >> curVertex.nz
-					>> curVertex.textured >> curVertex.hasNormal;
-				vertices.push_back(curVertex);
-			}
-			else if (mode == 1) {
-				std::string curIndex;
-				while (std::getline(stream, curIndex, ' ')) {
-					const auto idx = std::stoul(curIndex);
-					indices.push_back(idx);
-				}
-			}
-		}
-
-		printf("Num Vertices: %d\nNum Indices: %d\n", vertices.size(), indices.size());
+	mesh(const std::vector<mesh_vertex_t> &vertices, const std::vector<unsigned> &indices) {
 		NumIndices = indices.size();
 
-		//// Generate opengl buffers
+		// Generate opengl buffers
 		glGenBuffers(1, &VBO); 
 		glGenBuffers(1, &EBO);
 
+		// Generate our VAO
 		glGenVertexArrays(1, &VAO);
 		glBindVertexArray(VAO);
 
+		// Copy our vertex data into vbo
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertices[0]), &vertices.front(), GL_STATIC_DRAW);
 
+		// Copy our indices into our ebo
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(indices[0]), &indices.front(), GL_STATIC_DRAW);
 
@@ -113,16 +66,26 @@ public:
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(mesh_vertex_t), (void*)(5 * sizeof(float)));
 		glEnableVertexAttribArray(2);
 
+		// Textured?
 		glVertexAttribIPointer(3, 1, GL_FLOAT, sizeof(mesh_vertex_t), (void*)(8 * sizeof(float)));
 		glEnableVertexAttribArray(3);
 
+		// Normals?
 		glVertexAttribIPointer(4, 1, GL_FLOAT, sizeof(mesh_vertex_t), (void*)(9 * sizeof(float)));
 		glEnableVertexAttribArray(4);
+
+		valid = true;
 	}
 
 	mesh(unsigned int texture) : m_uTexture{ texture } {};
 
 	void Draw() {
+		if (!valid) {
+			std::cerr << "Attempted to render invalid mesh: " << std::hex << this << std::endl;
+			return;
+		}
+
+		// Simply bind VAO and draw
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, NumIndices, GL_UNSIGNED_INT, 0);
 	}

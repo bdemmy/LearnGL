@@ -20,7 +20,7 @@
 
 // Local includes
 #include "shader.h"
-#include "texture.h"
+#include "resource_manager.h"
 #include "window.h"
 #include "camera.h"
 #include "mesh.h"
@@ -34,7 +34,7 @@ constexpr auto WINDOW_HEIGHT = 768;
 std::unique_ptr<shader> mainShader;
 std::unique_ptr<shader> lightingShader;
 std::unique_ptr<shader> lightSourceShader;
-unsigned int texture, texture2;
+unsigned int texContainer, texFace;
 float deltaTime = 0.f;
 float lastTime = 0.f;
 auto cam1 = camera(glm::vec3(0, 0, 3));
@@ -81,12 +81,15 @@ void RenderLitCube() {
 	lightingShader->setVec3("lightColor", 1.f, 0.f, 1.0f); 
 	lightingShader->setVec3("viewPos", cam1.get_pos());
 
+	// SCALE ROTATE TRANSLATE
 	for (int i = 0; i < 10; i++) {
-		auto modelMatrix = glm::mat4(1.0);
-		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-		modelMatrix = glm::scale(modelMatrix, glm::vec3(.8));
 		const float angle = 20.f * i;
-		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f)); 
+
+		auto modelMatrix = glm::mat4(1.0);
+		modelMatrix = glm::scale(modelMatrix, glm::vec3(.8));
+		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+
 		lightingShader->setMatrix("normalModel", glm::inverseTranspose(modelMatrix)); 
 		lightingShader->setMatrix("model", modelMatrix);
 		testMesh->Draw();
@@ -110,7 +113,7 @@ int main() {
 	cam1.set_yaw(-90); 
 
 	// Our main render loop
-	testMesh = std::make_unique<mesh>("meshes/sphere.mesh"); 
+	testMesh = resource_manager::load_mesh("meshes/sphere.mesh"); 
 
 	while (!glfwWindowShouldClose(window)) {
 		float curTime = glfwGetTime();
@@ -137,9 +140,9 @@ int main() {
 
 		//render_cubes(); 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		glBindTexture(GL_TEXTURE_2D, texContainer);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, texture2);
+		glBindTexture(GL_TEXTURE_2D, texFace);
 		RenderLight();
 		RenderLitCube();
 
@@ -154,12 +157,6 @@ void process_input_for_window(GLFWwindow* window) {
 		glfwSetWindowShouldClose(window, true);
 	}
 }
-
-struct vertex_t {
-	float pos[3];
-	float color[3];
-	float uv[2];
-};
 
 void render_cubes() {
 	glm::vec3 cubePositions[] = {
@@ -176,9 +173,9 @@ void render_cubes() {
 	};
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, texContainer);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texture2);
+	glBindTexture(GL_TEXTURE_2D, texFace);
 
 	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
@@ -188,56 +185,6 @@ void render_cubes() {
 		mainShader->setMatrix("model", modelMatrix);
 		testMesh->Draw();
 	}
-}
- 
-void render_square() {
-	const vertex_t vertices[] = {
-			{.pos = {-1, -1, 0}, .color = {1, 1, 1}, .uv = {0, 0}},
-			{.pos = {-1,  1, 0}, .color = {1, 1, 1}, .uv = {0, 1}},
-			{.pos = { 1,  1, 0}, .color = {1, 1, 1}, .uv = {1, 1}},
-			{.pos = { 1, -1, 0}, .color = {1, 1, 1}, .uv = {1, 0}},
-	};
-
-	const uint32_t indices[]{
-			0, 1, 3, 1, 2, 3
-	};
-
-	static bool initialized = false;
-	static unsigned int VBO;
-	static unsigned int VAO;
-	static unsigned int EBO;
-
-	if (!initialized) {
-		glGenBuffers(1, &VBO);
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &EBO);
-
-		glBindVertexArray(VAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), nullptr);
-		glEnableVertexAttribArray(0);
-
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-
-		initialized = true;
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texture2);
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 bool initialize_shaders() {
@@ -269,6 +216,6 @@ bool initialize_shaders() {
 }
 
 void initialize_textures() {
-	texture = load_texture("textures/container.jpg");
-	texture2 = load_texture("textures/awesomeface.png", true);
+	texContainer = resource_manager::load_texture("textures/container.jpg");
+	texFace = resource_manager::load_texture("textures/awesomeface.png", true);
 }

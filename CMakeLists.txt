@@ -49,7 +49,7 @@ add_subdirectory(glad)
 add_subdirectory(glm)
 
 # Main executable
-add_executable(LearnGL main.cpp shader.cpp shader.h "window.h" "texture.h" "texture.cpp" "camera.h" "mesh.h")
+add_executable(LearnGL main.cpp shader.cpp shader.h "window.h"  "resource_manager.cpp" "camera.h" "mesh.h" "resource_manager.h")
 
 # Linking
 target_link_libraries(LearnGL ${OpenGL_LIB_NAMES} glad glfw)
