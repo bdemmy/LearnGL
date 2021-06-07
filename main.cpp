@@ -29,6 +29,7 @@
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
 constexpr auto WINDOW_HEIGHT = 768;
+constexpr auto CAMERA_SPEED = 1.f;
 
 // Global data
 std::unique_ptr<shader> mainShader;
@@ -47,7 +48,8 @@ bool initialize_shaders();
 void initialize_textures();
 void render_cubes();
 
-std::unique_ptr<mesh> testMesh;
+std::unique_ptr<mesh> meshSphere;
+std::unique_ptr<mesh> meshCube;
 
 void RenderLight() {
 	const auto camX = sin(glfwGetTime()) * 1;
@@ -59,7 +61,7 @@ void RenderLight() {
 	model = glm::scale(model, glm::vec3(0.2f));
 	lightSourceShader->use();
 	lightSourceShader->setMatrix("model", model);
-	testMesh->Draw(); 
+	meshSphere->Draw(); 
 }
 
 void RenderLitCube() {
@@ -92,13 +94,22 @@ void RenderLitCube() {
 
 		lightingShader->setMatrix("normalModel", glm::inverseTranspose(modelMatrix)); 
 		lightingShader->setMatrix("model", modelMatrix);
-		testMesh->Draw();
+		meshSphere->Draw();
 	}
 }
 
 int main() {
 	// Initialize the window optionally using opengl settings
-	auto window = init_window(WINDOW_WIDTH, WINDOW_HEIGHT);
+	auto window = init_window({
+		.glContextMajor = 3,
+		.glContextMinor = 3,
+		.glMSAASamples = 2,
+		.width = 1600,
+		.height = 900,
+		.vsync = true,
+		.msaa = true,
+		.title = "Main Window"
+		});
 
 	// Initialize our shaders
 	if (!initialize_shaders()) {  
@@ -110,25 +121,23 @@ int main() {
 	initialize_textures();
 
 	// Main camera
-	cam1.set_yaw(-90); 
+	cam1.look_at({0, 0, 0});
 
 	// Our main render loop
-	testMesh = resource_manager::load_mesh("meshes/sphere.mesh"); 
+	meshSphere = resource_manager::load_mesh("meshes/sphere.mesh");
+	meshCube = resource_manager::load_mesh("meshes/test.mesh");
 
 	while (!glfwWindowShouldClose(window)) {
 		float curTime = glfwGetTime();
 		deltaTime = curTime - lastTime;
 		lastTime = curTime;
-
+		
 		glfwPollEvents();
 		process_input_for_window(window);
 
 		glClearColor(0.05f, 0.05f, 0.05f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		cam1.set_pitch(0);
-
-		mainShader->setMatrix("model", glm::rotate(glm::mat4(1.0), glm::radians(-55.f), glm::vec3(1.0, 0.0, 0.0)));
 		mainShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
 		mainShader->setMatrix("view", cam1.matrix());
 
@@ -138,13 +147,9 @@ int main() {
 		lightingShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
 		lightingShader->setMatrix("view", cam1.matrix());
 
-		//render_cubes(); 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texContainer);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, texFace);
 		RenderLight();
 		RenderLitCube();
+		//render_cubes();
 
 		glfwSwapBuffers(window);
 	}
@@ -155,6 +160,20 @@ int main() {
 void process_input_for_window(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, true);
+	}
+
+	// Camera Movement
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		cam1.move_forward(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+		cam1.move_backward(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+		cam1.move_left(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+		cam1.move_right(CAMERA_SPEED * deltaTime);
 	}
 }
 
@@ -177,13 +196,15 @@ void render_cubes() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, texFace);
 
+	mainShader->setInt("tex1", 0);
+	mainShader->setInt("tex2", 1);
+
 	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
 		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-		const float angle = 20.f * i;
-		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(20.f * i), glm::vec3(1.0f, 0.3f, 0.5f));
 		mainShader->setMatrix("model", modelMatrix);
-		testMesh->Draw();
+		meshCube->Draw();
 	}
 }
 

@@ -1,29 +1,32 @@
-
-#ifndef OPENGL_CONTEXTV_MAJOR
-#define OPENGL_CONTEXTV_MAJOR 3
-#endif
-
-#ifndef OPENGL_CONTEXTV_MINOR
-#define OPENGL_CONTEXTV_MINOR 3
-#endif
-
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
+
+struct window_config_t {
+	unsigned glContextMajor, glContextMinor;
+	unsigned glMSAASamples;
+	unsigned width, height;
+	bool vsync, msaa;
+	const char* title;
+};
 
 auto framebuffer_size_callback(GLFWwindow* window, int width, int height) -> void {
 	glViewport(0, 0, width, height);
 }
 
-auto init_window(int width, int height) -> GLFWwindow* {
+GLFWwindow* init_window(window_config_t config) {
 	// Initialize GLFW and specify our profile
 	glfwInit();
-	glfwWindowHint(GLFW_SAMPLES, 2);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, OPENGL_CONTEXTV_MAJOR);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, OPENGL_CONTEXTV_MINOR);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, config.glContextMajor);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, config.glContextMinor);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+	// MSAA
+	if (config.msaa) {
+		glfwWindowHint(GLFW_SAMPLES, config.glMSAASamples);
+	}
+
 	// Attempt to spawn a window, if this fails, notify the user and exit
-	auto* window = glfwCreateWindow(width, height, "First Window", nullptr, nullptr);
+	auto* window = glfwCreateWindow(config.width, config.height, config.title, nullptr, nullptr);
 	if (window == nullptr) {
 		std::cerr << "Failed to initialize GLFW window." << std::endl;
 
@@ -42,15 +45,19 @@ auto init_window(int width, int height) -> GLFWwindow* {
 	}
 
 	// Set our viewport.  Match the window dimensions as we aren't doing anything outside of the viewport
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, config.width, config.height);
 
 	// Set our callback for when we resize the window
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_MULTISAMPLE);
 
-	glfwSwapInterval(1);
+	// Enable MSAA
+	if (config.msaa) {
+		glEnable(GL_MULTISAMPLE);
+	}
+
+	glfwSwapInterval(config.vsync ? 1 : 0);
 
 	return window;
 }

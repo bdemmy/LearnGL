@@ -77,8 +77,6 @@ public:
 		valid = true;
 	}
 
-	mesh(unsigned int texture) : m_uTexture{ texture } {};
-
 	void Draw() {
 		if (!valid) {
 			std::cerr << "Attempted to render invalid mesh: " << std::hex << this << std::endl;

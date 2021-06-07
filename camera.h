@@ -8,20 +8,21 @@ private:
 
 public:
 	auto updateFront() {
-		glm::vec3 direction;
-		direction.x = cos(glm::radians(m_fYaw)) * cos(glm::radians(m_fPitch));
-		direction.y = sin(glm::radians(m_fPitch));
-		direction.z = sin(glm::radians(m_fYaw)) * cos(glm::radians(m_fPitch));
-		m_vCameraFront = glm::normalize(direction);
+		// calculate the new Front vector
+		glm::vec3 front;
+		front.x = cos(glm::radians(m_fYaw)) * cos(glm::radians(m_fPitch));
+		front.y = sin(glm::radians(m_fPitch));
+		front.z = sin(glm::radians(m_fYaw)) * cos(glm::radians(m_fPitch));
+		m_vCameraFront = glm::normalize(front);
 	}
 
 	auto right() const -> glm::vec3 {
 		const auto up = glm::vec3(0.f, 1.f, 0.f);
-		return glm::normalize(glm::cross(up, m_vCameraFront));
+		return glm::normalize(glm::cross(m_vCameraFront, up));
 	}
 
 	auto up() const -> glm::vec3 {
-		return glm::cross(m_vCameraFront, right());
+		return glm::cross(right(), m_vCameraFront);
 	}
 
 	auto matrix() const -> glm::mat4 {
@@ -58,6 +59,14 @@ public:
 
 	auto move_left(const float amount) {
 		m_vCameraPos -= right() * amount;
+	}
+
+	auto move_forward(const float amount) {
+		m_vCameraPos += m_vCameraFront * amount;
+	}
+
+	auto move_backward(const float amount) {
+		m_vCameraPos -= m_vCameraFront * amount;
 	}
 
 	camera(glm::vec3&& pos) : m_vCameraPos{ pos } {}
