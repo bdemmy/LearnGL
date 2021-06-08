@@ -200,7 +200,6 @@ void render_cubes() {
 
 	mainShader->setInt("tex1", 0);
 	mainShader->setInt("tex2", 1);
-	lightingShader->setInt("tex1", 0);
 
 	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
@@ -240,29 +239,23 @@ void bind_matrix_ubo(const GLuint shader) {
 }
 
 bool initialize_shaders() {
-	mainShader = resource_manager::load_shader("vertex", "fragment");
+	mainShader = resource_manager::load_shader("vertex.vert", "fragment.frag");
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
 		return false;
 	}
 
-	lightingShader = resource_manager::load_shader("lighting.vs", "lighting.fs");
+	lightingShader = resource_manager::load_shader("lighting.vert", "lighting.frag");
 	if (lightingShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightingShader->log << std::endl;
 		return false;
 	}
 
-	lightSourceShader = resource_manager::load_shader("lighting.vs", "lightsource.fs");
+	lightSourceShader = resource_manager::load_shader("lighting.vert", "lightsource.frag");
 	if (lightSourceShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightSourceShader->log << std::endl;
 		return false;
 	}
-
-	mainShader->setInt("tex1", 0);
-	mainShader->setInt("tex2", 1);
-
-	lightingShader->setInt("tex1", 0);
-	lightingShader->setInt("tex2", 1);
 
 	return true;
 }
