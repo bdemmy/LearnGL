@@ -4,7 +4,20 @@
 #include <vector>
 #include <fstream>
 #include "mesh.h"
+#include "shader.h"
 #include <iostream>
+
+std::string load_file_to_str(const std::string& path) {
+	const auto ifs = std::ifstream(path);
+	auto sb = std::stringstream{};
+
+	if (ifs) {
+		sb << ifs.rdbuf();
+		return sb.str();
+	}
+
+	return "";
+}
 
 namespace resource_manager {
 	unsigned int load_texture(const std::string&& texture, bool flip_vertically) {
@@ -108,5 +121,16 @@ namespace resource_manager {
 		// Finished reading the file, just some stats
 		printf("Num Vertices: %d\nNum Indices: %d\n", vertices.size(), indices.size());
 		return std::make_unique<mesh>(vertices, indices);
+	}
+
+	std::unique_ptr<shader> load_shader(const std::string&& pathV, const std::string&& pathF) {
+		const auto vertex_str = load_file_to_str(pathV);
+		const auto frag_str = load_file_to_str(pathF);
+
+		if (!vertex_str.empty() && !frag_str.empty()) {
+			return std::make_unique<shader>(vertex_str, frag_str);
+		}
+
+		return nullptr;
 	}
 }

@@ -24,26 +24,12 @@ int compileShader(GLuint shader, char *log) {
     return 1;
 }
 
-std::string load_file_to_str(const std::string& path) {
-    const auto ifs = std::ifstream(path);
-    auto sb = std::stringstream{};
-
-    if (ifs) {
-        sb << ifs.rdbuf();
-    }
-
-    return sb.str();
-}
-
 shader::shader(const std::string &vertex, const std::string& fragment) {
     const auto vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     const auto fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
-    const auto vertex_str = load_file_to_str(vertex);
-    const auto vertex_source = vertex_str.c_str();
-
-    const auto frag_str = load_file_to_str(fragment);
-    const auto frag_source = frag_str.c_str();
+    const auto vertex_source = vertex.c_str();
+    const auto frag_source = fragment.c_str();
 
     glShaderSource(vertex_shader, 1, &vertex_source, nullptr);
     glShaderSource(fragment_shader, 1, &frag_source, nullptr);

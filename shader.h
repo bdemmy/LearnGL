@@ -17,7 +17,6 @@ private:
     unsigned int m_uProgram;
 
 public:
-    shader(const char **vertex, const char **fragment);
     shader(const std::string& vertex, const std::string& fragment);
 
     void use();

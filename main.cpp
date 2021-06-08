@@ -209,19 +209,19 @@ void render_cubes() {
 }
 
 bool initialize_shaders() {
-	mainShader = std::make_unique<shader>("shaders/vertex", "shaders/fragment");
+	mainShader = resource_manager::load_shader("shaders/vertex", "shaders/fragment");
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
 		return false;
 	}
 
-	lightingShader = std::make_unique<shader>("shaders/lighting.vs", "shaders/lighting.fs");
+	lightingShader = resource_manager::load_shader("shaders/lighting.vs", "shaders/lighting.fs");
 	if (lightingShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightingShader->log << std::endl;
 		return false;
 	}
 
-	lightSourceShader = std::make_unique<shader>("shaders/lighting.vs", "shaders/lightsource.fs");
+	lightSourceShader = resource_manager::load_shader("shaders/lighting.vs", "shaders/lightsource.fs");
 	if (lightSourceShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightSourceShader->log << std::endl;
 		return false;
