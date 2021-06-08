@@ -3,13 +3,17 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aUV;
 layout (location = 2) in vec3 aNormal;
-layout (location = 3) in float aB;
-layout (location = 4) in float aC;
+layout (location = 3) in int aTextured;
+layout (location = 4) in int aNormalized;
 
 uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
 uniform mat4 normalModel;
+
+layout (std140) uniform shader_data
+{ 
+    uniform mat4 view;
+    uniform mat4 projection;
+};
 
 out vec2 bUV;
 out vec3 bNormal;

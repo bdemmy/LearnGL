@@ -20,11 +20,17 @@ std::string load_file_to_str(const std::string& path) {
 }
 
 namespace resource_manager {
+	inline std::string texture_prefix = "textures/";
+	inline std::string mesh_prefix = "meshes/";
+	inline std::string shader_prefix = "shaders/";
+
+	std::vector<std::shared_ptr<shader>> loaded_shaders;
+
 	unsigned int load_texture(const std::string&& texture, bool flip_vertically) {
 		int width, height, channels;
 
 		stbi_set_flip_vertically_on_load(flip_vertically);
-		auto* const dat = stbi_load(texture.c_str(), &width, &height, &channels, 0);
+		auto* const dat = stbi_load((texture_prefix + texture).c_str(), &width, &height, &channels, 0);
 
 		// Create the texture object, bind it, copy the data, then gen the mipmaps
 		unsigned int tex;
@@ -50,7 +56,7 @@ namespace resource_manager {
 	}
 
 	std::unique_ptr<mesh> load_mesh(const std::string&& path) {
-		auto inFile = std::ifstream{ path };
+		auto inFile = std::ifstream{ mesh_prefix + path };
 		if (!inFile) {
 			return nullptr;
 		}
@@ -124,13 +130,41 @@ namespace resource_manager {
 	}
 
 	std::unique_ptr<shader> load_shader(const std::string&& pathV, const std::string&& pathF) {
-		const auto vertex_str = load_file_to_str(pathV);
-		const auto frag_str = load_file_to_str(pathF);
+		const auto vertex_str = load_file_to_str(shader_prefix + pathV);
+		const auto frag_str = load_file_to_str(shader_prefix + pathF);
 
 		if (!vertex_str.empty() && !frag_str.empty()) {
 			return std::make_unique<shader>(vertex_str, frag_str);
 		}
 
 		return nullptr;
+	}
+
+	std::vector<std::shared_ptr<shader>>& get_loaded_shaders() {
+		return loaded_shaders;
+	}
+
+	void set_texture_directory(std::string&& path) {
+		if (!path.ends_with('/') && !path.ends_with('\\')) {
+			path += "/";
+		}
+
+		texture_prefix = path;
+	}
+
+	void set_mesh_directory(std::string&& path) {
+		if (!path.ends_with('/') && !path.ends_with('\\')) {
+			path += "/";
+		}
+
+		mesh_prefix = path;
+	}
+
+	void set_shader_directory(std::string&& path) {
+		if (!path.ends_with('/') && !path.ends_with('\\')) {
+			path += "/";
+		}
+
+		shader_prefix = path;
 	}
 }

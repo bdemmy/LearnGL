@@ -17,4 +17,13 @@ namespace resource_manager {
 	// Load a vertex and fragment shader from a file on the system
 	// Returns compiled shader program
 	std::unique_ptr<shader> load_shader(const std::string&& pathV, const std::string&& pathF);
+
+	// Set the texture/image directory
+	void set_texture_directory(std::string&& path);
+
+	// Set the mesh directory
+	void set_mesh_directory(std::string&& path);
+
+	// Set the shader directory
+	void set_shader_directory(std::string&& path);
 };
