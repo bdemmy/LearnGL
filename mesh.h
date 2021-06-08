@@ -13,7 +13,7 @@ struct mesh_vertex_t {
 	float x, y, z;
 	float u, v;
 	float nx, ny, nz;
-	bool textured, hasNormal;
+	int textured, hasNormal;
 };
 
 class mesh {

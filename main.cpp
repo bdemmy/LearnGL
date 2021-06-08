@@ -25,6 +25,7 @@
 #include "camera.h"
 #include "mesh.h"
 #include <glm/gtc/matrix_inverse.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -35,7 +36,7 @@ constexpr auto CAMERA_SPEED = 1.f;
 std::unique_ptr<shader> mainShader;
 std::unique_ptr<shader> lightingShader;
 std::unique_ptr<shader> lightSourceShader;
-unsigned int texContainer, texFace;
+unsigned int texContainer, texFace, texCapsule;
 float deltaTime = 0.f;
 float lastTime = 0.f;
 auto cam1 = camera(glm::vec3(0, 0, 3));
@@ -47,9 +48,13 @@ void render_square();
 bool initialize_shaders();
 void initialize_textures();
 void render_cubes();
+void init_matrix_ubo();
+void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection);
+void bind_matrix_ubo(const GLuint shader);
 
 std::unique_ptr<mesh> meshSphere;
 std::unique_ptr<mesh> meshCube;
+std::unique_ptr<mesh> meshCapsule;
 
 void RenderLight() {
 	const auto camX = sin(glfwGetTime()) * 1;
@@ -83,13 +88,13 @@ void RenderLitCube() {
 	lightingShader->setVec3("lightColor", 1.f, 0.f, 1.0f); 
 	lightingShader->setVec3("viewPos", cam1.get_pos());
 
-	// SCALE ROTATE TRANSLATE
+	// SCALE TRANSLATE ROTATE
 	for (int i = 0; i < 10; i++) {
 		const float angle = 20.f * i;
 
 		auto modelMatrix = glm::mat4(1.0);
 		modelMatrix = glm::scale(modelMatrix, glm::vec3(.8));
-		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
+		modelMatrix = glm::translate(modelMatrix, cubePositions[i]); 
 		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 
 		lightingShader->setMatrix("normalModel", glm::inverseTranspose(modelMatrix)); 
@@ -115,7 +120,10 @@ int main() {
 	if (!initialize_shaders()) {  
 		return -1;
 	}
-	mainShader->use();
+	init_matrix_ubo();
+	bind_matrix_ubo(mainShader->getProgram());
+	bind_matrix_ubo(lightingShader->getProgram());
+	bind_matrix_ubo(lightSourceShader->getProgram());
 
 	// Generate and setup the textures (just one for now)
 	initialize_textures();
@@ -124,8 +132,9 @@ int main() {
 	cam1.look_at({0, 0, 0});
 
 	// Our main render loop
-	meshSphere = resource_manager::load_mesh("meshes/sphere.mesh");
-	meshCube = resource_manager::load_mesh("meshes/test.mesh");
+	meshSphere = resource_manager::load_mesh("sphere.mesh");
+	meshCube = resource_manager::load_mesh("test.mesh");
+	meshCapsule = resource_manager::load_mesh("capsule.mesh");
 
 	while (!glfwWindowShouldClose(window)) {
 		float curTime = glfwGetTime();
@@ -138,14 +147,7 @@ int main() {
 		glClearColor(0.05f, 0.05f, 0.05f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		mainShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
-		mainShader->setMatrix("view", cam1.matrix());
-
-		lightSourceShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
-		lightSourceShader->setMatrix("view", cam1.matrix());
-
-		lightingShader->setMatrix("projection", glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f));
-		lightingShader->setMatrix("view", cam1.matrix());
+		update_matrix_ubo(glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f), cam1.matrix());
 
 		RenderLight();
 		RenderLitCube();
@@ -198,6 +200,7 @@ void render_cubes() {
 
 	mainShader->setInt("tex1", 0);
 	mainShader->setInt("tex2", 1);
+	lightingShader->setInt("tex1", 0);
 
 	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
@@ -208,20 +211,48 @@ void render_cubes() {
 	}
 }
 
+GLuint uboMatrices = 0;
+GLuint binding_point_index = 10;
+void init_matrix_ubo() {
+	// Generate the uniform buffer
+	// Bind it, copy the data over, and unbind
+	glGenBuffers(1, &uboMatrices);
+	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(shader_data), &shader_data, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	// Index 10 just to test
+	glBindBufferBase(GL_UNIFORM_BUFFER, binding_point_index, uboMatrices);
+}
+
+void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection) {
+	shader_data.view = view;
+	shader_data.projection = projection;
+
+	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(shader_data.projection));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(shader_data.view));
+}
+
+void bind_matrix_ubo(const GLuint shader) {
+	unsigned int block_index = glGetUniformBlockIndex(shader, "shader_data"); 
+	glUniformBlockBinding(shader, block_index, binding_point_index);
+}
+
 bool initialize_shaders() {
-	mainShader = resource_manager::load_shader("shaders/vertex", "shaders/fragment");
+	mainShader = resource_manager::load_shader("vertex", "fragment");
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
 		return false;
 	}
 
-	lightingShader = resource_manager::load_shader("shaders/lighting.vs", "shaders/lighting.fs");
+	lightingShader = resource_manager::load_shader("lighting.vs", "lighting.fs");
 	if (lightingShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightingShader->log << std::endl;
 		return false;
 	}
 
-	lightSourceShader = resource_manager::load_shader("shaders/lighting.vs", "shaders/lightsource.fs");
+	lightSourceShader = resource_manager::load_shader("lighting.vs", "lightsource.fs");
 	if (lightSourceShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightSourceShader->log << std::endl;
 		return false;
@@ -237,6 +268,7 @@ bool initialize_shaders() {
 }
 
 void initialize_textures() {
-	texContainer = resource_manager::load_texture("textures/container.jpg");
-	texFace = resource_manager::load_texture("textures/awesomeface.png", true);
+	texContainer = resource_manager::load_texture("container.jpg");
+	texFace = resource_manager::load_texture("awesomeface.png", true);
+	texCapsule = resource_manager::load_texture("capsule0.jpg");
 }

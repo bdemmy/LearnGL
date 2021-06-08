@@ -96,3 +96,6 @@ void shader::use() {
     glUseProgram(m_uProgram);
 }
 
+const unsigned int shader::getProgram() const {
+    return m_uProgram;
+}

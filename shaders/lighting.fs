@@ -12,6 +12,7 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 
 // Unused
+uniform int textured;
 uniform sampler2D tex1;
 uniform sampler2D tex2;
 
@@ -39,12 +40,16 @@ vec3 computeSpecular() {
 }
 
 void main() {
+    vec3 baseColor = objectColor;
+    if (textured != 0) {
+        baseColor = vec3(texture(tex1, bUV));
+    }
     norm = normalize(bNormal);
     lightDir = normalize(lightPos - FragPos);
     //vec3 oColor = vec3(mix(texture(tex1, bUV), texture(tex2, bUV), .2));
     vec3 ambient = computeAmbient();
     vec3 diffuse = computeDiffuse();
     vec3 specular = computeSpecular();
-    vec3 result = (ambient + diffuse + specular) * objectColor;
+    vec3 result = (ambient + diffuse + specular) * baseColor;
     FragColor = vec4(result, 1.0);
 }
