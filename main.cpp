@@ -44,12 +44,11 @@ auto cam1 = camera(glm::vec3(0, 0, 3));
 // Function prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void process_input_for_window(GLFWwindow* window);
-void render_square();
 bool initialize_shaders();
 void initialize_textures();
 void render_cubes();
 void init_matrix_ubo();
-void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection);
+void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection, const glm::vec3&& viewPos);
 void bind_matrix_ubo(const GLuint shader);
 
 std::unique_ptr<mesh> meshSphere;
@@ -147,7 +146,7 @@ int main() {
 		glClearColor(0.05f, 0.05f, 0.05f, 1.f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		update_matrix_ubo(glm::perspective(glm::radians(60.f), 16.f / 9.f, 0.1f, 100.0f), cam1.matrix());
+		update_matrix_ubo(glm::perspective(glm::radians(90.f), 16.f / 9.f, 0.1f, 100.0f), cam1.matrix(), cam1.get_pos());
 
 		RenderLight();
 		RenderLitCube();
@@ -199,7 +198,7 @@ void render_cubes() {
 	glBindTexture(GL_TEXTURE_2D, texFace);
 
 	mainShader->setInt("tex1", 0);
-	mainShader->setInt("tex2", 1);
+	mainShader->setInt("tex2", 1); 
 
 	for (int i = 0; i < 10; i++) { 
 		auto modelMatrix = glm::mat4(1.0);
@@ -224,13 +223,15 @@ void init_matrix_ubo() {
 	glBindBufferBase(GL_UNIFORM_BUFFER, binding_point_index, uboMatrices);
 }
 
-void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection) {
+void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection, const glm::vec3&& cameraPosition) {
 	shader_data.view = view;
 	shader_data.projection = projection;
+	shader_data.cameraPosition = cameraPosition;
 
 	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(shader_data.projection));
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(shader_data.view));
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), sizeof(glm::vec3), glm::value_ptr(shader_data.cameraPosition));
 }
 
 void bind_matrix_ubo(const GLuint shader) {

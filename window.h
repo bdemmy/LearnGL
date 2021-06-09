@@ -50,7 +50,13 @@ GLFWwindow* init_window(window_config_t config) {
 	// Set our callback for when we resize the window
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+	// Z Test
 	glEnable(GL_DEPTH_TEST);
+
+	// Face culling, clockwise triangles are front
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+	glFrontFace(GL_CW);
 
 	// Enable MSAA
 	if (config.msaa) {
