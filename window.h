@@ -49,6 +49,7 @@ GLFWwindow* init_window(window_config_t config) {
 
 	// Set our callback for when we resize the window
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// Z Test
 	glEnable(GL_DEPTH_TEST);
