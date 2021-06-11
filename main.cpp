@@ -26,6 +26,8 @@
 #include "mesh.h"
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "model.h"
+#include "utils.h"
 
 // Constant data
 constexpr auto WINDOW_WIDTH = 1366;
@@ -34,10 +36,10 @@ constexpr auto CAMERA_SPEED = 1.f;
 constexpr auto MOUSE_SENSITIVITY = 0.1f;
 
 // Global data
-std::unique_ptr<shader> mainShader;
-std::unique_ptr<shader> lightingShader;
-std::unique_ptr<shader> lightSourceShader;
-std::unique_ptr<shader> skyboxShader;
+std::shared_ptr<shader> mainShader;
+std::shared_ptr<shader> lightingShader;
+std::shared_ptr<shader> lightSourceShader;
+std::shared_ptr<shader> skyboxShader;
 unsigned int texContainer, texFace, texCapsule, texTerrain, texSphere;
 unsigned int texSkybox;
 float deltaTime{0}, lastTime{0};
@@ -50,29 +52,26 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 bool initialize_shaders();
 void initialize_textures();
 void initialize_skybox();
-void render_cubes();
 void init_matrix_ubo();
 void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection, const glm::vec3&& cameraPosition);
 void bind_matrix_ubo(const GLuint shader);
 
-std::unique_ptr<mesh> meshSphere;
-std::unique_ptr<mesh> meshCube;
-std::unique_ptr<mesh> meshCapsule;
-std::unique_ptr<mesh> meshCooper;
-std::unique_ptr<mesh> meshTerrain;
-std::unique_ptr<mesh> meshSkybox;
+std::shared_ptr<mesh> meshSphere;
+std::shared_ptr<mesh> meshCube;
+std::shared_ptr<mesh> meshCapsule;
+std::shared_ptr<mesh> meshCooper;
+std::shared_ptr<mesh> meshTerrain;
+std::shared_ptr<mesh> meshSkybox;
+
+std::shared_ptr<model> modelSphere;
+std::shared_ptr<model> modelLight;
 
 void RenderLight() {
-	const auto camX = sin(glfwGetTime()) * 1;
-	const auto camZ = cos(glfwGetTime()) * 1;
-	glm::vec3 lightPos(camX, 0.25, camZ);
+	glm::vec3 lightPos(sin(glfwGetTime()) * 1, 0.25, cos(glfwGetTime()) * 1);
 	lightingShader->setVec3("lightPos", lightPos.x, lightPos.y, lightPos.z);
-	auto model = glm::mat4(1.0f);
-	model = glm::translate(model, lightPos);
-	model = glm::scale(model, glm::vec3(0.2f));
-	lightSourceShader->use();
-	lightSourceShader->setMatrix("model", model);
-	meshSphere->Draw();
+	modelLight->set_position(lightPos);
+	modelLight->set_scale({ 0.2f, 0.2f, 0.2f });
+	modelLight->draw();
 }
 
 void RenderLitCubes() {
@@ -88,52 +87,17 @@ void RenderLitCubes() {
 		glm::vec3(1.5f, 0.2f, -1.5f),
 		glm::vec3(-1.3f, 1.0f, -1.5f)
 	};
-
-	lightingShader->use();
-	lightingShader->setVec3("objectColor", 1.0f, 1.0f, 1.0f);
+	
 	lightingShader->setVec3("lightColor", 1.f, 1.f, 1.0f);
-	lightingShader->setVec3("viewPos", cam1.get_pos());
 
 	static float rotation = 0.f;
 	rotation += 120.f * deltaTime;
 
 	// SCALE TRANSLATE ROTATE
-	for (auto i = 0; i < 10; i++) {
-		const auto angle = (20.f * i);
-
-		auto modelMatrix = glm::mat4(1.0);
-		modelMatrix = glm::scale(modelMatrix, glm::vec3(.8));
-		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-		modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation), glm::vec3(0.f, 1.f, 0.f));
-		//modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-
-		lightingShader->setMatrix("normalModel", glm::inverseTranspose(modelMatrix));
-		lightingShader->setMatrix("model", modelMatrix);
-		lightingShader->setInt("textured", 1);
-		meshSphere->Draw();
-	}
-}
-
-void RenderTerrain() {
-	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f, 0.0f, 0.0f)
-	};
-
-	lightingShader->use();
-	lightingShader->setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-	lightingShader->setVec3("lightColor", 1.f, 1.f, 1.0f);
-	lightingShader->setVec3("viewPos", cam1.get_pos());
-
-	// SCALE TRANSLATE ROTATE
-	for (auto i = 0; i < 1; i++) {
-		auto modelMatrix = glm::mat4(1.0);
-		modelMatrix = glm::scale(modelMatrix, glm::vec3(.02));
-		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-
-		lightingShader->setMatrix("normalModel", glm::inverseTranspose(modelMatrix));
-		lightingShader->setMatrix("model", modelMatrix);
-		lightingShader->setInt("textured", 1);
-		meshTerrain->Draw();
+	for (auto& pos : cubePositions) {
+		modelSphere->set_position(pos);
+		modelSphere->set_yaw(rotation);
+		modelSphere->draw();
 	}
 }
 
@@ -182,12 +146,9 @@ int main() {
 	cam1.look_at({ 0, 0, 0 });
 
 	// Our main render loop
-	meshSphere = resource_manager::load_mesh("sphere.mesh");
+	modelSphere = std::make_shared<model>("sphere.mesh", "genericLit");
+	modelLight = std::make_shared<model>("sphere.mesh", "genericLight");
 	meshSkybox = resource_manager::load_mesh("skybox.mesh");
-	//meshCube = resource_manager::load_mesh("test.mesh");
-	//meshCapsule = resource_manager::load_mesh("capsule.mesh");
-	//meshCooper = resource_manager::load_mesh("cooper.mesh");
-	//meshTerrain = resource_manager::load_mesh("terrain.mesh");
 
 	while (!glfwWindowShouldClose(window)) {
 		const float curTime = glfwGetTime();
@@ -205,98 +166,11 @@ int main() {
 		RenderSkybox();
 		RenderLight();
 		RenderLitCubes();
-		//render_cubes();
-		//RenderTerrain();
 
 		glfwSwapBuffers(window);
 	}
 
 	return 0;
-}
-
-void process_input_for_window(GLFWwindow* window) {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
-	}
-
-	// Camera Movement
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		cam1.move_forward(CAMERA_SPEED * deltaTime);
-	}
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		cam1.move_backward(CAMERA_SPEED * deltaTime);
-	}
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		cam1.move_left(CAMERA_SPEED * deltaTime);
-	}
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		cam1.move_right(CAMERA_SPEED * deltaTime);
-	}
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-		cam1.move_up(CAMERA_SPEED * deltaTime);
-	}
-	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-		cam1.move_down(CAMERA_SPEED * deltaTime);
-	}
-}
-
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-	static bool firstMouse = true;
-	static float lastX = 400, lastY = 300;
-	
-	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
-	
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos;
-	lastX = xpos;
-	lastY = ypos;
-	
-	xoffset *= MOUSE_SENSITIVITY;
-	yoffset *= MOUSE_SENSITIVITY;
-
-	cam1.add_yaw(xoffset);
-	cam1.add_pitch(yoffset);
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-	cam1.adjust_fov(-2 * yoffset);
-}
-
-void render_cubes() {
-	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(2.0f, 5.0f, -15.0f),
-		glm::vec3(-1.5f, -2.2f, -2.5f),
-		glm::vec3(-3.8f, -2.0f, -12.3f),
-		glm::vec3(2.4f, -0.4f, -3.5f),
-		glm::vec3(-1.7f, 3.0f, -7.5f),
-		glm::vec3(1.3f, -2.0f, -2.5f),
-		glm::vec3(1.5f, 2.0f, -2.5f),
-		glm::vec3(1.5f, 0.2f, -1.5f),
-		glm::vec3(-1.3f, 1.0f, -1.5f)
-	};
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texContainer);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texFace);
-
-	mainShader->setInt("tex1", 0);
-	mainShader->setInt("tex2", 1);
-
-	for (int i = 0; i < 10; i++) {
-		auto modelMatrix = glm::mat4(1.0);
-		modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-		modelMatrix = glm::rotate(modelMatrix, glm::radians(20.f * i), glm::vec3(1.0f, 0.3f, 0.5f));
-		mainShader->setMatrix("model", modelMatrix);
-		meshCube->Draw();
-	}
 }
 
 GLuint uboMatrices = 0;
@@ -331,25 +205,25 @@ void bind_matrix_ubo(const GLuint shader) {
 }
 
 bool initialize_shaders() {
-	mainShader = resource_manager::load_shader("vertex.vert", "fragment.frag");
+	mainShader = resource_manager::load_shader("generic", "vertex.vert", "fragment.frag");
 	if (mainShader->error) {
 		std::cerr << "Error compiling shaders: \n" << mainShader->log << std::endl;
 		return false;
 	}
 
-	lightingShader = resource_manager::load_shader("lighting.vert", "lighting.frag");
+	lightingShader = resource_manager::load_shader("genericLit", "lighting.vert", "lighting.frag");
 	if (lightingShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightingShader->log << std::endl;
 		return false;
 	}
 
-	lightSourceShader = resource_manager::load_shader("lighting.vert", "lightsource.frag");
+	lightSourceShader = resource_manager::load_shader("genericLight", "lighting.vert", "lightsource.frag");
 	if (lightSourceShader->error) {
 		std::cerr << "Error compiling shaders: \n" << lightSourceShader->log << std::endl;
 		return false;
 	}
 
-	skyboxShader = resource_manager::load_shader("skybox.vert", "skybox.frag");
+	skyboxShader = resource_manager::load_shader("skybox", "skybox.vert", "skybox.frag");
 	if (skyboxShader->error) {
 		std::cerr << "Error compiling shaders: \n" << skyboxShader->log << std::endl;
 		return false;
@@ -366,38 +240,6 @@ void initialize_textures() {
 	texSphere = resource_manager::load_texture("korn.jpg");
 }
 
-unsigned int loadCubemap(std::vector<std::string> faces)
-{
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-	int width, height, nrChannels;
-	for (unsigned int i = 0; i < faces.size(); i++)
-	{
-		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data)
-		{
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
-			);
-			stbi_image_free(data);
-		}
-		else
-		{
-			std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
-			stbi_image_free(data);
-		}
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	return textureID;
-}
-
 void initialize_skybox() {
 	const std::vector<std::string> skybox_faces {
 		"./textures/skybox/right.jpg",
@@ -407,5 +249,59 @@ void initialize_skybox() {
 		"./textures/skybox/front.jpg",
 		"./textures/skybox/back.jpg"
 	};
-	texSkybox = loadCubemap(skybox_faces);
+	texSkybox = resource_manager::load_cubemap(skybox_faces);
+}
+
+void process_input_for_window(GLFWwindow* window) {
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window, true);
+	}
+
+	// Camera Movement
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		cam1.move_forward(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+		cam1.move_backward(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+		cam1.move_left(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+		cam1.move_right(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		cam1.move_up(CAMERA_SPEED * deltaTime);
+	}
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		cam1.move_down(CAMERA_SPEED * deltaTime);
+	}
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+	static bool firstMouse = true;
+	static float lastX = 400, lastY = 300;
+
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
+
+	xoffset *= MOUSE_SENSITIVITY;
+	yoffset *= MOUSE_SENSITIVITY;
+
+	cam1.add_yaw(xoffset);
+	cam1.add_pitch(yoffset);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	cam1.adjust_fov(-2 * yoffset);
 }

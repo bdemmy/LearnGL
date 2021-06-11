@@ -6,14 +6,23 @@
 #include "mesh.h"
 #include "shader.h"
 #include <iostream>
+#include <unordered_map>
+#include <tuple>
+#include "tuplehash.h"
+
+using namespace std;
+
+unordered_map<string, shared_ptr<shader>> mp_loadedShaders;
+unordered_map<string, shared_ptr<mesh>> mp_loadedMeshes;
+unordered_map<tuple<string, bool>, unsigned int> mp_loadedTextures;
 
 std::string load_file_to_str(const std::string& path) {
 	const auto ifs = std::ifstream(path);
-	auto sb = std::stringstream{};
 
 	if (ifs) {
-		sb << ifs.rdbuf();
-		return sb.str();
+	auto buffer = std::stringstream{};
+		buffer << ifs.rdbuf();
+		return buffer.str();
 	}
 
 	return "";
@@ -24,9 +33,12 @@ namespace resource_manager {
 	inline std::string mesh_prefix = "meshes/";
 	inline std::string shader_prefix = "shaders/";
 
-	std::vector<std::shared_ptr<shader>> loaded_shaders;
-
-	unsigned int load_texture(const std::string&& texture, bool flip_vertically) {
+	unsigned int load_texture(const std::string texture, bool flip_vertically) {
+		const auto result = mp_loadedTextures.find({ texture, flip_vertically });
+		if (result != mp_loadedTextures.end()) {
+			return result->second;
+		}
+		
 		int width, height, channels;
 
 		stbi_set_flip_vertically_on_load(flip_vertically);
@@ -52,11 +64,24 @@ namespace resource_manager {
 		// Free the texture
 		stbi_image_free(dat);
 
+		mp_loadedTextures[{ texture, flip_vertically }] = tex;
 		return tex;
 	}
 
-	std::unique_ptr<mesh> load_mesh(const std::string&& path) {
-		auto inFile = std::ifstream{ mesh_prefix + path };
+	unsigned int load_texture(const std::string texture) {
+		return load_texture(texture, false);
+	}
+	
+	std::shared_ptr<mesh> load_mesh(const std::string path) {
+		const auto completePath = mesh_prefix + path;
+		
+		auto inFile = std::ifstream{ completePath };
+		
+		const auto result = mp_loadedMeshes.find(completePath);
+		if (result != mp_loadedMeshes.end()) {
+			return result->second;
+		}
+		
 		if (!inFile) {
 			return nullptr;
 		}
@@ -126,22 +151,38 @@ namespace resource_manager {
 
 		// Finished reading the file, just some stats
 		printf("Num Vertices: %d\nNum Indices: %d\n", vertices.size(), indices.size());
-		return std::make_unique<mesh>(vertices, indices);
+
+		return (mp_loadedMeshes[completePath] = make_shared<mesh>(vertices, indices));
 	}
 
-	std::unique_ptr<shader> load_shader(const std::string&& pathV, const std::string&& pathF) {
-		const auto vertex_str = load_file_to_str(shader_prefix + pathV);
-		const auto frag_str = load_file_to_str(shader_prefix + pathF);
+	std::shared_ptr<shader> load_shader(const std::string name, const std::string pathV, const std::string pathF) {
+		const auto totalPathV = shader_prefix + pathV;
+		const auto totalPathF = shader_prefix + pathF;
+
+		const auto result = mp_loadedShaders.find(name);
+		if (result != mp_loadedShaders.end()) {
+			return result->second;
+		}
+
+		const auto vertex_str = load_file_to_str(totalPathV);
+		const auto frag_str = load_file_to_str(totalPathF);
 
 		if (!vertex_str.empty() && !frag_str.empty()) {
-			return std::make_unique<shader>(vertex_str, frag_str);
+			return (mp_loadedShaders[name] = std::make_shared<shader>(vertex_str, frag_str));
 		}
 
 		return nullptr;
 	}
+	
+	std::shared_ptr<shader> load_shader(const std::string name) {
+		const auto totalPathV = shader_prefix + name + ".vert";
+		const auto totalPathF = shader_prefix + name + ".frag";
 
-	std::vector<std::shared_ptr<shader>>& get_loaded_shaders() {
-		return loaded_shaders;
+		return load_shader(name, totalPathV, totalPathF);
+	}
+
+	unordered_map<tuple<string, bool>, unsigned int>& get_loaded_shaders() {
+		return mp_loadedTextures;
 	}
 
 	void set_texture_directory(std::string&& path) {
@@ -166,5 +207,37 @@ namespace resource_manager {
 		}
 
 		shader_prefix = path;
+	}
+
+	unsigned int load_cubemap(std::vector<std::string> faces)
+	{
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+		int width, height, nrChannels;
+		for (unsigned int i = 0; i < faces.size(); i++)
+		{
+			unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+			if (data)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+					0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+				);
+				stbi_image_free(data);
+			}
+			else
+			{
+				std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+				stbi_image_free(data);
+			}
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+		return textureID;
 	}
 }
