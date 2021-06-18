@@ -1,3 +1,5 @@
+#ifndef MODEL_H
+#define MODEL_H
 #include <memory>
 
 #include "resource_manager.h"
@@ -57,3 +59,4 @@ public:
 
 	void draw() const;
 };
+#endif // MODEL_H

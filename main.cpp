@@ -95,7 +95,8 @@ void RenderLitCubes() {
 
 	// SCALE TRANSLATE ROTATE
 	for (auto& pos : cubePositions) {
-		modelSphere->set_position(pos);
+		lightingShader->setInt("textured", 0);
+		modelSphere->set_position(pos); 
 		modelSphere->set_yaw(rotation);
 		modelSphere->draw();
 	}
@@ -104,9 +105,10 @@ void RenderLitCubes() {
 void RenderSkybox() {
 	glDepthMask(GL_FALSE);
 	skyboxShader->use();
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE3); 
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texSkybox);
-	skyboxShader->setInt("skybox", 0);
+	lightingShader->setInt("skybox", 3); 
+	skyboxShader->setInt("skybox", 3);
 	skyboxShader->setMatrix("view", glm::mat4(glm::mat3(cam1.get_view_matrix())));
 	skyboxShader->setMatrix("projection", cam1.get_projection_matrix());
 	meshSkybox->Draw();
@@ -146,7 +148,7 @@ int main() {
 	cam1.look_at({ 0, 0, 0 });
 
 	// Our main render loop
-	modelSphere = std::make_shared<model>("sphere.mesh", "genericLit");
+	modelSphere = std::make_shared<model>("test.mesh", "genericLit");
 	modelLight = std::make_shared<model>("sphere.mesh", "genericLight");
 	meshSkybox = resource_manager::load_mesh("skybox.mesh");
 

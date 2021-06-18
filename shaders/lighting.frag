@@ -10,10 +10,12 @@ uniform vec3 objectColor;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 
-// Unused
 uniform int textured;
 uniform sampler2D tex1;
 uniform sampler2D tex2;
+
+// Skybox sampler for reflection
+uniform samplerCube skybox;
 
 vec3 norm;
 vec3 lightDir;
@@ -47,7 +49,7 @@ vec3 computeSpecular() {
 
 void main() {
     vec3 baseColor = objectColor;
-    if (textured != 0) {
+    if (textured != 0 && false) {
         baseColor = vec3(texture(tex1, bUV));
     }
     norm = normalize(bNormal);
@@ -56,5 +58,8 @@ void main() {
     vec3 diffuse = computeDiffuse();
     vec3 specular = computeSpecular();
     vec3 result = (ambient + diffuse + specular) * baseColor;
-    FragColor = vec4(result, 1.0);
+
+    vec3 I = normalize(FragPos - cameraPosition);
+    vec3 R = reflect(I, normalize(bNormal));
+    FragColor = (vec4(texture(skybox, R).rgb, 1.0) * vec4(.15)) + vec4(result, 1.0);
 }

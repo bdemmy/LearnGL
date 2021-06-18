@@ -79,7 +79,7 @@ void shader::setInt(const char *name, const int &v) {
 void shader::setMatrix(const char* name, const glm::mat4& v) {
     const auto location = glGetUniformLocation(m_uProgram, name);
     glUseProgram(m_uProgram);
-    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(v));
+    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(v)); 
 }
 
 void shader::setVec3(const char* name, const glm::vec3&& v) {

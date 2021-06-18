@@ -1,3 +1,5 @@
+#ifndef MESH_H
+#define MESH_H
 #include <vector>
 #include <string>
 #include <optional>
@@ -9,15 +11,12 @@
 
 class material;
 
-#ifndef MESH_VERTEX_T
-#define MESH_VERTEX_T
 struct mesh_vertex_t {
 	float x, y, z;
 	float u, v;
 	float nx, ny, nz;
 	int textured, hasNormal;
 };
-#endif
 
 class mesh {
 	// Vertex data
@@ -44,3 +43,4 @@ public:
 
 	void Draw();
 };
+#endif // MESH_H
