@@ -203,7 +203,7 @@ void update_matrix_ubo(const glm::mat4&& view, const glm::mat4&& projection, con
 
 void bind_matrix_ubo(const GLuint shader) {
 	const auto block_index = glGetUniformBlockIndex(shader, "shader_data");
-	glUniformBlockBinding(shader, block_index, binding_point_index);
+	glUniformBlockBinding(shader, block_index, binding_point_index); 
 }
 
 bool initialize_shaders() {
@@ -305,5 +305,5 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	cam1.adjust_fov(-2 * yoffset);
+	cam1.adjust_fov(-2.f * yoffset);
 }

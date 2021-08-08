@@ -20,7 +20,7 @@ std::string load_file_to_str(const std::string& path) {
 	const auto ifs = std::ifstream(path);
 
 	if (ifs) {
-	auto buffer = std::stringstream{};
+		auto buffer = std::stringstream{};
 		buffer << ifs.rdbuf();
 		return buffer.str();
 	}
@@ -74,13 +74,13 @@ namespace resource_manager {
 	
 	std::shared_ptr<mesh> load_mesh(const std::string path) {
 		const auto completePath = mesh_prefix + path;
-		
-		auto inFile = std::ifstream{ completePath };
-		
+
 		const auto result = mp_loadedMeshes.find(completePath);
 		if (result != mp_loadedMeshes.end()) {
 			return result->second;
 		}
+		
+		auto inFile = std::ifstream{ completePath };
 		
 		if (!inFile) {
 			return nullptr;
